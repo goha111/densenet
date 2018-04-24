@@ -52,3 +52,57 @@ class Transition(nn.Module):
         out = F.avg_pool2d(out, 2)
         return out
 
+class DenseBlock(nn.Module):
+    def __init__(self, input_size, growth_rate, num_layers=5, bottleneck=True):
+        super().__init__()
+        layers = []
+        in_channel = input_size
+        for i in range(num_layers):
+            if bottleneck:
+                layers.append(BottleneckSingleLayer(in_channel, growth_rate))
+            else:
+                layers.append(SingleLayer(in_channel, growth_rate))
+            in_channel += growth_rate
+        self.layers = nn.Sequential(layers)
+
+    def forward(self, input):
+        return self.layers(input)
+
+class DenseNet(nn.Module):
+    def __init__(self, growth_rate, depth, reduction, nClasses, bottleneck=True):
+        super().__init__()
+
+        nDenseBlocks = (depth-4) // 3
+        if bottleneck:
+            nDenseBlocks //= 2
+
+        nChannels = 2 * growth_rate
+        self.conv1 = nn.Conv2d(3, nChannels, kernel_size=3, padding=1)
+        self.dense1 = DenseBlock(nChannels, growth_rate, nDenseBlocks, bottleneck)
+        nChannels += nDenseBlocks * growth_rate
+        nOutChannels = int(math.floor(nChannels*reduction))
+        self.trans1 = Transition(nChannels, nOutChannels)
+
+        nChannels = nOutChannels
+        self.dense2 = DenseBlock(nChannels, growth_rate, nDenseBlocks, bottleneck)
+        nChannels += nDenseBlocks * growth_rate
+        nOutChannels = int(math.floor(nChannels*reduction))
+        self.trans2 = Transition(nChannels, nOutChannels)
+
+        nChannels = nOutChannels
+        self.dense3 = DenseBlock(nChannels, growth_rate, nDenseBlocks, bottleneck)
+        nChannels += nDenseBlocks * growth_rate
+
+        self.bn1 = nn.BatchNorm2d(nChannels)
+        self.fc = nn.Linear(nChannels, nClasses)
+
+        self.apply(initializer)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.trans1(self.dense1(out))
+        out = self.trans2(self.dense2(out))
+        out = self.dense3(out)
+        out = torch.squeeze(F.avg_pool2d(F.relu(self.bn1(out)), 8))
+        out = F.log_softmax(self.fc(out))
+        return out
