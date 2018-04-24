@@ -74,7 +74,7 @@ def main():
                      transform=testTransform),
         batch_size=args.batchSz, shuffle=False, **kwargs)
 
-    net = densenet.DenseNet(growthRate=12, depth=100, reduction=0.5,
+    net = densenet.DenseNet(growth_rate=12, depth=100, reduction=0.5,
                             bottleneck=True, nClasses=10)
 
     print('  + Number of params: {}'.format(
