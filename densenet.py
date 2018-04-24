@@ -57,7 +57,7 @@ class DenseBlock(nn.Module):
         super().__init__()
         layers = []
         in_channel = input_size
-        for i in range(num_layers):
+        for i in range(int(num_layers)):
             if bottleneck:
                 layers.append(BottleneckSingleLayer(in_channel, growth_rate))
             else:
@@ -69,34 +69,43 @@ class DenseBlock(nn.Module):
         return self.layers(input)
 
 class DenseNet(nn.Module):
-    def __init__(self, growth_rate, depth, reduction, nClasses, bottleneck=True):
-        super().__init__()
+    def __init__(self, growth_rate, depth, reduction, nClasses, bottleneck):
+        super(DenseNet, self).__init__()
 
         nDenseBlocks = (depth-4) // 3
         if bottleneck:
             nDenseBlocks //= 2
 
         nChannels = 2 * growth_rate
-        self.conv1 = nn.Conv2d(3, nChannels, kernel_size=3, padding=1)
-        self.dense1 = DenseBlock(nChannels, growth_rate, nDenseBlocks, bottleneck)
+        self.conv1 = nn.Conv2d(3, nChannels, kernel_size=3, padding=1,
+                               bias=False)
+        self.dense1 = self._make_dense(nChannels, growth_rate, nDenseBlocks, bottleneck)
         nChannels += nDenseBlocks * growth_rate
         nOutChannels = int(math.floor(nChannels*reduction))
         self.trans1 = Transition(nChannels, nOutChannels)
 
         nChannels = nOutChannels
-        self.dense2 = DenseBlock(nChannels, growth_rate, nDenseBlocks, bottleneck)
+        self.dense2 = self._make_dense(nChannels, growth_rate, nDenseBlocks, bottleneck)
         nChannels += nDenseBlocks * growth_rate
         nOutChannels = int(math.floor(nChannels*reduction))
         self.trans2 = Transition(nChannels, nOutChannels)
 
         nChannels = nOutChannels
-        self.dense3 = DenseBlock(nChannels, growth_rate, nDenseBlocks, bottleneck)
+        self.dense3 = self._make_dense(nChannels, growth_rate, nDenseBlocks, bottleneck)
         nChannels += nDenseBlocks * growth_rate
 
         self.bn1 = nn.BatchNorm2d(nChannels)
         self.fc = nn.Linear(nChannels, nClasses)
 
-        self.apply(initializer)
+    def _make_dense(self, nChannels, growthRate, nDenseBlocks, bottleneck):
+        layers = []
+        for i in range(int(nDenseBlocks)):
+            if bottleneck:
+                layers.append(BottleneckSingleLayer(nChannels, growthRate))
+            else:
+                layers.append(SingleLayer(nChannels, growthRate))
+            nChannels += growthRate
+        return nn.Sequential(*layers)
 
     def forward(self, x):
         out = self.conv1(x)
