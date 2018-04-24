@@ -40,3 +40,15 @@ class SingleLayer(nn.Module):
         out = self.conv(F.relu(self.bn(x)))
         out = torch.cat((x, out), dim=1)
         return out
+
+class Transition(nn.Module):
+    def __init__(self, input_size, output_size):
+        super().__init__()
+        self.bn = nn.BatchNorm2d(input_size)
+        self.conv = nn.Conv2d(input_size, output_size, kernel_size=1)
+
+    def forward(self, x):
+        out = self.conv(F.relu(self.bn(x)))
+        out = F.avg_pool2d(out, 2)
+        return out
+
