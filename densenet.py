@@ -6,7 +6,7 @@ import math
 
 def initializer(m):
     for name, param in m.named_parameters():
-        if 'weight' in name:
+        if 'weight' in name and param.dim() > 1:
             nn.init.xavier_uniform(param.data)
         elif 'bias' in name:
             param.data.zero_()
