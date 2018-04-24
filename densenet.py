@@ -63,7 +63,7 @@ class DenseBlock(nn.Module):
             else:
                 layers.append(SingleLayer(in_channel, growth_rate))
             in_channel += growth_rate
-        self.layers = nn.Sequential(layers)
+        self.layers = nn.Sequential(*layers)
 
     def forward(self, input):
         return self.layers(input)
