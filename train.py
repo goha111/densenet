@@ -33,7 +33,7 @@ def main():
     parser.add_argument('--no-cuda', action='store_true')
     parser.add_argument('--save')
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--opt', type=str, default='adam',
+    parser.add_argument('--opt', type=str, default='sgd',
                         choices=('sgd', 'adam', 'rmsprop'))
     args = parser.parse_args()
 
