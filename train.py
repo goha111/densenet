@@ -28,12 +28,12 @@ import make_graph
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batchSz', type=int, default=64)
+    parser.add_argument('--batch', type=int, default=64)
     parser.add_argument('--nEpochs', type=int, default=300)
     parser.add_argument('--no-cuda', action='store_true')
     parser.add_argument('--save')
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--opt', type=str, default='sgd',
+    parser.add_argument('--opt', type=str, default='adam',
                         choices=('sgd', 'adam', 'rmsprop'))
     args = parser.parse_args()
 
@@ -68,11 +68,11 @@ def main():
     trainLoader = DataLoader(
         dset.CIFAR10(root='cifar', train=True, download=True,
                      transform=trainTransform),
-        batch_size=args.batchSz, shuffle=True, **kwargs)
+        batch_size=args.batch, shuffle=True, **kwargs)
     testLoader = DataLoader(
         dset.CIFAR10(root='cifar', train=False, download=True,
                      transform=testTransform),
-        batch_size=args.batchSz, shuffle=False, **kwargs)
+        batch_size=args.batch, shuffle=False, **kwargs)
 
     net = densenet.DenseNet(growth_rate=12, depth=100, reduction=0.5,
                             bottleneck=True, nClasses=10)

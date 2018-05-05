@@ -10,10 +10,10 @@ def initializer(m):
             nn.init.xavier_uniform(param.data)
         elif 'bias' in name:
             param.data.zero_()
-        elif param.dim() == 1:
+        elif param.dim() > 1:
             nn.init.xavier_uniform(param.data)
         else:
-            nn.init.xavier_uniform(param.data)
+            param.data.zero_()
 
 class BottleneckSingleLayer(nn.Module):
     def __init__(self, input_size, growth_rate):
@@ -96,7 +96,7 @@ class DenseNet(nn.Module):
         self.bn1 = nn.BatchNorm2d(nChannels)
         self.fc = nn.Linear(nChannels, nClasses)
 
-        # self.apply(initializer)
+        self.apply(initializer)
 
     def forward(self, x):
         out = self.conv1(x)
