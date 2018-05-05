@@ -68,11 +68,11 @@ def main():
     trainLoader = DataLoader(
         dset.STL10(root='stl', split='train', download=True,
                      transform=trainTransform),
-        batch_size=2, shuffle=True, **kwargs)
+        batch_size=args.batch, shuffle=True, **kwargs)
     testLoader = DataLoader(
         dset.STL10(root='stl', split='valid', download=True,
                      transform=testTransform),
-        batch_size=2, shuffle=False, **kwargs)
+        batch_size=args.batch, shuffle=False, **kwargs)
 
     net = densenet.DenseNet(growth_rate=12, depth=100, reduction=0.5,
                             bottleneck=True, nClasses=10)
