@@ -21,7 +21,7 @@ import math
 
 import shutil
 
-import setproctitle
+#import setproctitle
 
 import densenet
 import make_graph
@@ -39,7 +39,7 @@ def main():
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     args.save = args.save or 'work/densenet.base'
-    setproctitle.setproctitle(args.save)
+#    setproctitle.setproctitle(args.save)
 
     torch.manual_seed(args.seed)
     if args.cuda:
@@ -54,7 +54,7 @@ def main():
     normTransform = transforms.Normalize(normMean, normStd)
 
     trainTransform = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
+        transforms.RandomCrop(96, padding=4),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         normTransform
@@ -66,13 +66,13 @@ def main():
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
     trainLoader = DataLoader(
-        dset.CIFAR10(root='cifar', train=True, download=True,
+        dset.STL10(root='stl', split='train', download=True,
                      transform=trainTransform),
-        batch_size=args.batch, shuffle=True, **kwargs)
+        batch_size=2, shuffle=True, **kwargs)
     testLoader = DataLoader(
-        dset.CIFAR10(root='cifar', train=False, download=True,
+        dset.STL10(root='stl', split='valid', download=True,
                      transform=testTransform),
-        batch_size=args.batch, shuffle=False, **kwargs)
+        batch_size=2, shuffle=False, **kwargs)
 
     net = densenet.DenseNet(growth_rate=12, depth=100, reduction=0.5,
                             bottleneck=True, nClasses=10)
