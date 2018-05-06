@@ -26,14 +26,16 @@ import shutil
 import densenet
 import make_graph
 
+from tensorboardX import SummaryWriter
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch', type=int, default=64)
+    parser.add_argument('--batch', type=int, default=8)
     parser.add_argument('--nEpochs', type=int, default=300)
     parser.add_argument('--no-cuda', action='store_true')
     parser.add_argument('--save')
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--opt', type=str, default='sgd',
+    parser.add_argument('--opt', type=str, default='adam',
                         choices=('sgd', 'adam', 'rmsprop'))
     args = parser.parse_args()
 
@@ -70,7 +72,7 @@ def main():
                      transform=trainTransform),
         batch_size=args.batch, shuffle=True, **kwargs)
     testLoader = DataLoader(
-        dset.STL10(root='stl', split='valid', download=True,
+        dset.STL10(root='stl', split='test', download=True,
                      transform=testTransform),
         batch_size=args.batch, shuffle=False, **kwargs)
 
@@ -92,21 +94,26 @@ def main():
 
     trainF = open(os.path.join(args.save, 'train.csv'), 'w')
     testF = open(os.path.join(args.save, 'test.csv'), 'w')
-
+    index = 0
+    writer = SummaryWriter()
     for epoch in range(1, args.nEpochs + 1):
         adjust_opt(args.opt, optimizer, epoch)
-        train(args, epoch, net, trainLoader, optimizer, trainF)
-        test(args, epoch, net, testLoader, optimizer, testF)
+        index = train(args, epoch, net, trainLoader, optimizer, trainF, writer, index)
+        loss2, err2 = test(args, epoch, net, testLoader, optimizer, testF)
         torch.save(net, os.path.join(args.save, 'latest.pth'))
         os.system('./plot.py {} &'.format(args.save))
-
+        writer.add_scalar('data/Test_Loss', loss2, epoch)
+        writer.add_scalar('data/Test_Accuracy', 100 - err2, epoch)
     trainF.close()
     testF.close()
+    writer.close()
 
-def train(args, epoch, net, trainLoader, optimizer, trainF):
+def train(args, epoch, net, trainLoader, optimizer, trainF, writer, index):
     net.train()
     nProcessed = 0
     nTrain = len(trainLoader.dataset)
+    acc_loss = 0
+    acc_err = 0
     for batch_idx, (data, target) in enumerate(trainLoader):
         if args.cuda:
             data, target = data.cuda(), target.cuda()
@@ -125,9 +132,11 @@ def train(args, epoch, net, trainLoader, optimizer, trainF):
         print('Train Epoch: {:.2f} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tError: {:.6f}'.format(
             partialEpoch, nProcessed, nTrain, 100. * batch_idx / len(trainLoader),
             loss.data[0], err))
-
+        writer.add_scalar('data/Train_loss', loss.data[0], batch_idx + index)
+        writer.add_scalar('data/Train_Accuracy', 100 - err, batch_idx + index)
         trainF.write('{},{},{}\n'.format(partialEpoch, loss.data[0], err))
         trainF.flush()
+    return index + batch_idx
 
 def test(args, epoch, net, testLoader, optimizer, testF):
     net.eval()
@@ -151,6 +160,7 @@ def test(args, epoch, net, testLoader, optimizer, testF):
 
     testF.write('{},{},{}\n'.format(epoch, test_loss, err))
     testF.flush()
+    return test_loss, err
 
 def adjust_opt(optAlg, optimizer, epoch):
     if optAlg == 'sgd':
